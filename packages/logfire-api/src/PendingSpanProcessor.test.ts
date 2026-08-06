@@ -241,7 +241,9 @@ describe('PendingSpanProcessor', () => {
     processor.onStart(
       makeSpan({
         attributes: { [ATTRIBUTES_SAMPLE_RATE_KEY]: 0.5, [ATTRIBUTES_SPAN_TYPE_KEY]: 'span' },
-        traceId: '7fffffff000000000000000000000000',
+        // One below floor(0.5 * 0xffffffff): the threshold comparison is exclusive, so the
+        // boundary value itself is covered in sampling.test.ts instead.
+        traceId: '7ffffffe000000000000000000000000',
       }),
       ROOT_CONTEXT
     )

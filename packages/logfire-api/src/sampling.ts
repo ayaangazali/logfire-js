@@ -77,7 +77,8 @@ export function checkTraceIdRatio(traceId: string, rate: number): boolean {
   }
 
   const threshold = Math.floor(rate * 0xffffffff)
-  return accumulation <= threshold
+  // Strictly less than, the same comparison OTel's sampler makes against its upper bound.
+  return accumulation < threshold
 }
 
 /**

@@ -2,6 +2,7 @@
 import type { IdGenerator, ReadableSpan, Span, SpanProcessor } from '@opentelemetry/sdk-trace-base'
 
 import { ROOT_CONTEXT, SpanKind, SpanStatusCode, TraceFlags } from '@opentelemetry/api'
+import { SamplingDecision, TraceIdRatioBasedSampler } from '@opentelemetry/sdk-trace-base'
 import { describe, expect, test, vi } from 'vite-plus/test'
 
 import { ATTRIBUTES_LEVEL_KEY, ATTRIBUTES_SPAN_TYPE_KEY } from './constants'
@@ -65,6 +66,27 @@ describe('checkTraceIdRatio', () => {
 
   test('all-zeros trace ID is always sampled at any positive rate', () => {
     expect(checkTraceIdRatio('00000000000000000000000000000000', 0.001)).toBe(true)
+  })
+
+  test('agrees with OTel TraceIdRatioBasedSampler on a trace ID that lands on the threshold', () => {
+    const rate = 0.5
+    // Accumulates to exactly floor(0.5 * 0xffffffff), the one value the comparisons disagree on.
+    const traceId = `7fffffff${'0'.repeat(24)}`
+    const otelSampled =
+      new TraceIdRatioBasedSampler(rate).shouldSample(ROOT_CONTEXT, traceId).decision === SamplingDecision.RECORD_AND_SAMPLED
+
+    expect(otelSampled).toBe(false)
+    expect(checkTraceIdRatio(traceId, rate)).toBe(otelSampled)
+  })
+
+  test('still samples a trace ID one below the threshold', () => {
+    const rate = 0.5
+    const traceId = `7ffffffe${'0'.repeat(24)}`
+    const otelSampled =
+      new TraceIdRatioBasedSampler(rate).shouldSample(ROOT_CONTEXT, traceId).decision === SamplingDecision.RECORD_AND_SAMPLED
+
+    expect(otelSampled).toBe(true)
+    expect(checkTraceIdRatio(traceId, rate)).toBe(otelSampled)
   })
 })
 
